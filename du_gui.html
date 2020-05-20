@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<link rel=stylesheet href=style.css>
+<link rel=stylesheet href=bamboo.css>
+<div id=app></div>
+<script type=module>
+
+class View {
+  get el() {
+    if (!this._el)
+      this._el = this.createElement();
+    return this._el;
+  }
+
+  get tagName() {
+    return 'div';
+  }
+
+  createElement() {
+    return document.createElement(this.tagName);
+  }
+
+  display() {
+    this.needsDisplay = false;
+  }
+
+  setNeedsDisplay() {
+    if (this.needsDisplay)
+      return;
+    this.needsDisplay = true;
+    requestAnimationFrame(() => this.display());
+  }
+}
+
+class BambooChartTotalView extends View {
+  createElement() {
+    const el = super.createElement();
+    el.className = 'bambooTotal';
+
+    this.levelEl = document.createElement('div');
+    this.levelEl.className = 'bambooTotalBar';
+    el.appendChild(this.levelEl);
+
+    return el;
+  }
+
+  set level(level) {
+    this.levelEl.style.height = `${level * 100}%`;
+    this.el.title = `${(Math.round(level * 1000) * 0.1).toString().substr(0, 4)}%`;
+  }
+}
+
+class BambooChartColumnView extends View {
+  constructor() {
+    super();
+    this.reusableCells = [];
+    this.visibleCells = [];
+  }
+
+  createElement() {
+    const el = super.createElement();
+    el.className = 'bambooColumn';
+    return el;
+  }
+
+  set cells(cells) {
+    while (this.visibleCells.length > cells.length) {
+      const cell = this.visibleCells.pop();
+      this.el.removeChild(cell.el);
+      this.reusableCells.push(cell);
+    }
+    while (this.visibleCells.length < cells.length) {
+      const cell = new BambooChartCellView();
+      this.visibleCells.push(cell);
+      this.el.appendChild(cell.el);
+    }
+    cells.forEach((cell, i) => {
+      const cellView = this.visibleCells[i];
+      Object.assign(cellView, cell);
+    });
+  }
+}
+
+const formatSize = bytes => {
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'EB'];
+  for (const size of sizes) {
+    if (bytes < 1000)
+      return `${Math.round(bytes*100)/100} ${size}`;
+    bytes /= 1000;
+  }
+}
+
+class BambooChartCellView extends View {
+  createElement() {
+    const el = super.createElement();
+    el.className = 'bambooCell';
+    el.addEventListener('mousedown', e => this.handleClick(e));
+    this.titleEl = document.createElement('span');
+    this.titleEl.className = 'title';
+    el.appendChild(this.titleEl);
+    el.appendChild(document.createTextNode(' – '));
+    this.subtitleEl = document.createElement('span');
+    this.subtitleEl.className = 'subtitle';
+    el.appendChild(this.subtitleEl);
+    return el;
+  }
+
+  set title(text) {
+    this.titleEl.textContent = text;
+  }
+
+  set subtitle(text) {
+    this.subtitleEl.textContent = text;
+  }
+
+  set weight(weight) {
+    this.el.style.flexGrow = weight;
+  }
+
+  set onclick(handler) {
+    if (handler)
+      this.el.classList.add('clickable');
+    else
+      this.el.classList.remove('clickable');
+    this._onclick = handler;
+  }
+
+  handleClick(e) {
+    if (this._onclick)
+      this._onclick(e);
+  }
+}
+
+class BambooChartView extends View {
+  createElement() {
+    const el = super.createElement();
+    el.className = 'bambooChart';
+
+    this.totalView = new BambooChartTotalView();
+    el.appendChild(this.totalView.el);
+
+    this.totalView.el.addEventListener('mousedown', e => {
+      e.preventDefault();
+      if (this._path.length > 1) {
+        this._path.pop();
+        this.setNeedsDisplay();
+      }
+    });
+
+    this.columnView = new BambooChartColumnView();
+    el.appendChild(this.columnView.el);
+
+    return el;
+  }
+
+  display() {
+    super.display();
+    const curNode = this._path[this._path.length-1];
+    let weight = 0;
+    let cells = Object.keys(curNode.children).map(k => {
+      const node = curNode.children[k];
+      weight += node.size;
+      return {
+        title: k,
+        subtitle: formatSize(node.size),
+        weight: node.size,
+        onclick: Object.keys(node.children).length ? e => {
+          e.preventDefault();
+          this._path.push(node);
+          this.setNeedsDisplay();
+        } : null
+      };
+    });
+    this.columnView.cells = cells;
+    this.totalView.level = weight / this._totalWeight;
+    if (this._path.length > 1) {
+      this.totalView.el.classList.add('clickable');
+    } else {
+      this.totalView.el.classList.remove('clickable');
+    }
+  }
+
+  set root(root) {
+    this._path = [root];
+    this._totalWeight = root.size;
+    this.setNeedsDisplay();
+  }
+}
+
+const chartView = new BambooChartView();
+app.appendChild(chartView.el);
+window.chart = chartView;
+
+window.loadData = data => {
+  chartView.root = data;
+};
+
+</script>

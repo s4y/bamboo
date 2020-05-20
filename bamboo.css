@@ -1,0 +1,64 @@
+body {
+  background: #e2ffe8;
+}
+
+.bambooChart {
+  display: flex;
+  margin: 0 1em;
+}
+
+.bambooChart > :not(:last-child) {
+  margin-right: 0;
+}
+
+.bambooTotal {
+  background: #FDF2D0;
+  width: 2em;
+  margin: 1em;
+  position: relative;
+  border: 1px solid #8f6d40;
+}
+
+.bambooTotalBar {
+  background: #B89230;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 0;
+  transition: height 0.2s;
+}
+
+.bambooColumn {
+  margin: 1em;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  border: 1px solid #8f6d40;
+  border-left-width: 3px;
+  width: 15em;
+}
+
+.bambooCell {
+  background: #88d144;
+  border-bottom: 3px solid #4C7830;
+  overflow: hidden;
+  flex: 1;
+  padding: 0.1em 0.5em;
+}
+
+.bambooCell:hover {
+  min-height: 3em;
+}
+
+.bambooCell:last-child {
+  border-bottom: none;
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.bambooCell .subtitle {
+  color: #555;
+}

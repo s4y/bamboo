@@ -1,0 +1,68 @@
+* { transition: color 0.5s; }
+
+html {
+  font: 14px system-ui, "Helvetica Neue", sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+}
+
+body:not([data-state=start]) > #dropzone {
+  display: none;
+}
+
+body:not([data-state=loading]) > #loading {
+  display: none;
+}
+
+body:not([data-state=loaded]) > #gui {
+  display: none;
+}
+
+#dropzone, #loading {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5em;
+}
+
+#dropzone pre {
+  margin: 1em;
+}
+
+#dropzone code {
+  background: #eee;
+  padding: 0.2em;
+}
+
+#dropzone::before {
+  content: "";
+  position: absolute;
+  top: 2em;
+  right: 2em;
+  bottom: 2em;
+  left: 2em;
+  border: 1em dashed rgba(0, 0, 0, 0.1);
+  border-radius: 3em;
+}
+
+#gui {
+  display: block;
+  border: none;
+  width: 100%;
+  height: 100%;
+}
+
+.bambooChart {
+  width: 100vw;
+  height: 100vh;
+}

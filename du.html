@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<link rel=stylesheet href=style.css>
+
+<!-- unused; this is here to temporarily work around a bug in github.com/s4y/reserve -->
+<link rel=stylesheet href=bamboo.css>
+<body data-state="start">
+<div id=dropzone>
+  Create a log with this command:
+  <pre><code>du -abx ~ &gt; du.txt</code></pre>
+  …then drag and drop it here.
+</div>
+<div id=loading>Processing…</div>
+<iframe id=gui src=du_gui.html></iframe>
+<script type=module>
+
+const parseLog = reader => {
+  const decoder = new TextDecoder();
+  const newNode = () => ({ size: null, children: {}, });
+  const tree = newNode();
+  let line = "";
+  const getChild = (name, parent) => {
+    if (!name)
+      return parent;
+    const child = parent.children[name];
+    if (child)
+      return child;
+    return parent.children[name] = newNode();
+  };
+  const parseLine = line => {
+    const tab = line.indexOf('\t');
+    const path = line.substr(tab + 1).split('/');
+    const size = +line.substr(0, tab);
+    let node = tree;
+    for (const component of path) {
+      if (component == '.')
+        continue;
+      node = getChild(component, node);
+    }
+    node.size = size;
+  };
+  const parse = s => {
+    line += s;
+    while(line) {
+      const eol = line.indexOf('\n');
+      if (eol == -1) {
+        if (line && !s) {
+          parseLine(line);
+          line = "";
+        }
+        break;
+      }
+      parseLine(line.substr(0, line[eol-1] == '\r' ? eol - 1 : eol));
+      line = line.substr(eol + 1);
+    }
+  }
+  const read = () => reader.read().then(({ done, value }) => {
+    if (value)
+      parse(decoder.decode(value));
+    if (!done)
+      return read();
+    parse("");
+    return tree;
+  });
+  return read();
+};
+
+let data = null;
+
+const sendData = () => {
+  if (data)
+    gui.contentWindow.loadData(data);
+};
+
+gui.addEventListener('load', sendData);
+
+dropzone.addEventListener('dragover', e => {
+  e.preventDefault();
+  event.dataTransfer.dropEffect = 'copy';
+});
+
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  let line = {};
+  document.body.dataset.state = 'loading';
+  parseLog(event.dataTransfer.files[0].stream().getReader()).then(tree => {
+    data = tree;
+    sendData();
+    document.body.dataset.state = 'loaded';
+  });
+});
+
+</script>
