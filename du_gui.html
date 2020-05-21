@@ -78,6 +78,30 @@ class BambooChartColumnView extends View {
       Object.assign(cellView, cell);
     });
   }
+
+  set selectedCell(idx) {
+    if (this._selectedCell)
+      this._selectedCell.el.classList.remove('selected');
+    this._selectedCell = idx != null ? this.visibleCells[idx] : null;
+    if (this._selectedCell)
+      this._selectedCell.el.classList.add('selected');
+  }
+}
+
+class BambooChartStalkView extends View {
+  constructor() {
+    super();
+
+    this.el.className = 'bambooStalk';
+
+    this.totalView = new BambooChartTotalView();
+    this.totalView.el;
+    // this.el.appendChild(this.totalView.el);
+
+    this.columnView = new BambooChartColumnView();
+    this.el.appendChild(this.columnView.el);
+
+  }
 }
 
 const formatSize = bytes => {
@@ -116,71 +140,90 @@ class BambooChartCellView extends View {
     this.el.style.flexGrow = weight;
   }
 
-  set onclick(handler) {
+  set onselect(handler) {
     if (handler)
       this.el.classList.add('clickable');
     else
       this.el.classList.remove('clickable');
-    this._onclick = handler;
+    this._onselect = handler;
   }
 
   handleClick(e) {
-    if (this._onclick)
-      this._onclick(e);
+    if (!this._onselect)
+      return;
+    this._onselect(e);
   }
 }
 
 class BambooChartView extends View {
+  constructor() {
+    super();
+    this._path = [];
+    this.stalkViews = [];
+  }
+
   createElement() {
     const el = super.createElement();
     el.className = 'bambooChart';
 
-    this.totalView = new BambooChartTotalView();
-    el.appendChild(this.totalView.el);
-
-    this.totalView.el.addEventListener('mousedown', e => {
-      e.preventDefault();
-      if (this._path.length > 1) {
-        this._path.pop();
-        this.setNeedsDisplay();
-      }
-    });
-
-    this.columnView = new BambooChartColumnView();
-    el.appendChild(this.columnView.el);
-
     return el;
   }
 
-  display() {
-    super.display();
-    const curNode = this._path[this._path.length-1];
-    let weight = 0;
-    let cells = Object.keys(curNode.children).map(k => {
-      const node = curNode.children[k];
-      weight += node.size;
+  push(newNode) {
+    const depth = this._path.push(newNode);
+    const newStalk = new BambooChartStalkView();
+    newStalk.columnView.cells = Object.keys(newNode.children).map((k, i) => {
+      const node = newNode.children[k];
+      const hasChildren = Object.keys(node.children).length > 0;
       return {
         title: k,
         subtitle: formatSize(node.size),
         weight: node.size,
-        onclick: Object.keys(node.children).length ? e => {
+        onselect: e => {
           e.preventDefault();
-          this._path.push(node);
-          this.setNeedsDisplay();
-        } : null
+          while (this._path.length > depth)
+            this.pop();
+          if (hasChildren) {
+            this.push(node);
+            this.setNeedsDisplay();
+          }
+          this.stalkViews.forEach((stalk, i) => {
+            stalk.totalView.level = node.size / this._path[i].size;
+          });
+          newStalk.columnView.selectedCell = i;
+        },
       };
     });
-    this.columnView.cells = cells;
-    this.totalView.level = weight / this._totalWeight;
-    if (this._path.length > 1) {
-      this.totalView.el.classList.add('clickable');
-    } else {
-      this.totalView.el.classList.remove('clickable');
-    }
+    // newStalk.totalView.el.addEventListener('mousedown', e => {
+    //   while (this._path.length > depth)
+    //     this.pop();
+    // });
+    // newStalk.totalView.el.classList.add('clickable');
+    this.stalkViews.push(newStalk);
+    this.el.appendChild(newStalk.el);
+  }
+
+  pop() {
+    this._path.pop();
+    const lastColumnView = this.stalkViews.pop();
+    this.el.removeChild(lastColumnView.el);
+  }
+
+  display() {
+    super.display();
+    // let weight = 0;
+    // this.totalView.level = weight / this._totalWeight;
+    // if (this._path.length > 1) {
+    //   this.totalView.el.classList.add('clickable');
+    // } else {
+    //   this.totalView.el.classList.remove('clickable');
+    // }
   }
 
   set root(root) {
-    this._path = [root];
+    while (this._path.length)
+      this.pop();
+    this.push(root);
     this._totalWeight = root.size;
     this.setNeedsDisplay();
   }

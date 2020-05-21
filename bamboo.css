@@ -14,29 +14,34 @@ body {
 .bambooTotal {
   background: #FDF2D0;
   width: 2em;
-  margin: 1em;
+  margin-right: 0.5em;
   position: relative;
   border: 1px solid #8f6d40;
 }
 
 .bambooTotalBar {
-  background: #B89230;
   position: absolute;
   right: 0;
   bottom: 0;
   left: 0;
   height: 0;
   transition: height 0.2s;
+  background: #7aa441;
 }
 
 .bambooColumn {
-  margin: 1em;
   display: flex;
   flex-direction: column;
   overflow: auto;
   border: 1px solid #8f6d40;
   border-left-width: 3px;
   width: 15em;
+}
+
+.bambooStalk {
+  display: flex;
+  flex-direction: row;
+  margin: 1em 2em;
 }
 
 .bambooCell {
@@ -53,6 +58,10 @@ body {
 
 .bambooCell:last-child {
   border-bottom: none;
+}
+
+.bambooCell.selected {
+  border-right: 20px solid #7aa441;
 }
 
 .clickable {
