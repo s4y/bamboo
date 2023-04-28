@@ -15,7 +15,7 @@
 
 const parseLog = reader => {
   const decoder = new TextDecoder();
-  const newNode = () => ({ size: null, children: {}, });
+  const newNode = () => ({ size: null, children: Object.create(null), });
   const tree = newNode();
   let line = "";
   const getChild = (name, parent) => {
